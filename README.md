@@ -8,7 +8,7 @@ Install deps
 
 Run it
 
-	node beddit.js --user=jelle@defekt.nl --pass=s3cr3t
+	node beddit.js --user=you@example.com --pass=s3cr3t
 
 ## How can I use this API?
 
