@@ -1,6 +1,6 @@
 {
   "name": "beddit-api",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Get sleep data from Beddit API",
   "main": "beddit-api.js",
   "scripts": {
@@ -11,5 +11,9 @@
   "dependencies": {
     "kew": "^0.5.0-alpha.1",
     "request": "^2.44.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/0x01/beddit-api"
   }
 }
