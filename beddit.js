@@ -1,57 +1,105 @@
 var Q = require('kew');
-var http = require('request');
+var request = require('request');
 var argv = require('minimist')(process.argv.slice(2));
+var prettyjson = require("prettyjson");
 
-function resource(x) {
-    return 'https://cloudapi.beddit.com/api/v1/' + x;
+
+var Beddit = function(options) {
+    this.options = {
+	baseURL: (options && options.baseURL) || 'https://cloudapi.beddit.com/api/v1/',
+    }
 }
 
-function userToken(auth) {
+Beddit.prototype._call = function(method, resource, data)
+{
     var deferred = Q.defer();
+    
+    var options = {
+	url: this.options.baseURL + resource,
+	method: method.toUpperCase()
+    };
 
-    var data = {
-	grant_type: 'password',
-	username: auth.username,
-	password: auth.password
-    }
+    // if Beddit object has authorization data, add the appropriate headers
+    if(this.authorized)
+	options.headers = { Authorization: "UserToken " + this.authorized.token };
+    
+    // add form data if it's a post
+    if(options.method === 'POST')
+	  options.form = data;
 
-    http.post(resource('auth/authorize'), {form:data}, function(err, res, body){
-	// console.log(err, res, body);
+    // otherwise for get we should add it as query parameters
+    // TODO
+
+    // generic callback, handle error, parse body
+    var callback = function(err, res, body)
+    {
+	// request failed
 	if(err)
 	    return deferred.reject(err);
 
-	var d = JSON.parse(body);
-	deferred.resolve({
-	    token: d.access_token,
-	    id: d.user
-	});
-    });
+	// API should have returned valid JSON now
+	var r = JSON.parse(body);
 
-    return deferred;
+	// see https://github.com/beddit/beddit-api/blob/master/1-General.md#conventions-for-error-responses
+        if(res.statusCode in [400, 403, 404, 410])
+	    return deferred.reject(r)
+
+	// ok, all good, return response
+	deferred.resolve(r);
+    };
+
+    // perform the HTTP request
+    request(options, callback);
+
+    return deferred.promise;
 }
 
-function sleep(user) {
-    var deferred = Q.defer();
+/**
+ Call this to get a user token, returns a promise that
+ upon completion returns an object of the form
+     
+    { token: '...', id: '...' }
 
-    var options = {
-	url: resource('user/' + user.id + '/sleep'),
-	headers: {
-	    Authorization: "UserToken " + user.token
-	}
-    }
+ Being the access token and the user id, as per
+ https://github.com/beddit/beddit-api/blob/master/2-Authentication.md
+*/
+Beddit.prototype.login = function(username, password) {
+    return this.
+	_call('POST', 'auth/authorize', {
+	    grant_type: 'password',
+	    username: username,
+	    password: password
+	})
+	.then(function(result){
 
-    http.get(options, function(err, res, body){
-	if(err)
-	    deferred.reject(err);
-	else
-	    deferred.resolve(JSON.parse(body));
+	    // store access token and user id
+	    this.authorized = {
+		token: result.access_token,
+		id: result.user
+	    };
+
+	    return this.authorized;
+	}.bind(this));
+};
+
+/** Retrieve all sleep data */
+Beddit.prototype.sleep = function() {	
+    return this._call('GET', 'user/' + this.authorized.id + '/sleep');
+};
+
+
+// example usage
+
+var beddit = new Beddit();
+
+beddit
+    .login(argv.user, argv.pass)
+    .then(function(auth) {
+	beddit
+	    .sleep()
+	    .then(function(sleep_data) {
+
+		console.log(prettyjson.render(sleep_data));
+		
+	    });
     });
-
-    return deferred;
-}
-
-userToken({username: argv.user, password: argv.pass}).then(function(user){
-    sleep(user).then(function(sleep_data){
-	console.log(sleep_data);
-    });
-});

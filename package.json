@@ -11,6 +11,7 @@
   "dependencies": {
     "kew": "^0.5.0-alpha.1",
     "minimist": "^1.1.0",
+    "prettyjson": "^1.0.0",
     "request": "^2.44.0"
   }
 }
