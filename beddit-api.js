@@ -1,10 +1,7 @@
 var Q = require('kew');
 var request = require('request');
-var argv = require('minimist')(process.argv.slice(2));
-var prettyjson = require("prettyjson");
 
-
-var Beddit = function(options) {
+module.exports = Beddit = function(options) {
     this.options = {
 	baseURL: (options && options.baseURL) || 'https://cloudapi.beddit.com/api/v1/',
     }
@@ -86,20 +83,3 @@ Beddit.prototype.login = function(username, password) {
 Beddit.prototype.sleep = function() {	
     return this._call('GET', 'user/' + this.authorized.id + '/sleep');
 };
-
-
-// example usage
-
-var beddit = new Beddit();
-
-beddit
-    .login(argv.user, argv.pass)
-    .then(function(auth) {
-	beddit
-	    .sleep()
-	    .then(function(sleep_data) {
-
-		console.log(prettyjson.render(sleep_data));
-		
-	    });
-    });
